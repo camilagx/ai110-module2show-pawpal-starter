@@ -1,15 +1,90 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
+    %% Initial design draft — will be refined once implementation is underway.
 
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Owner {
+        +str name
+        +int available_minutes_per_day
+        +str preferred_start_time
+        +dict preferences
+        +add_pet(pet) None
+        +get_pets() list~Pet~
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class Pet {
+        +str name
+        +str species
+        +str breed
+        +int age
+        +Owner owner
+        +add_task(task) None
+        +remove_task(task_id) None
+        +get_tasks() list~CareTask~
     }
 
-    ClassName --> AnotherClass : relationship
+    class Priority {
+        <<enumeration>>
+        LOW
+        MEDIUM
+        HIGH
+    }
+
+    class TaskCategory {
+        <<enumeration>>
+        WALK
+        FEEDING
+        MEDICATION
+        ENRICHMENT
+        GROOMING
+        OTHER
+    }
+
+    class Recurrence {
+        <<enumeration>>
+        NONE
+        DAILY
+        WEEKLY
+    }
+
+    class CareTask {
+        +str id
+        +str title
+        +TaskCategory category
+        +int duration_minutes
+        +Priority priority
+        +str fixed_time
+        +Recurrence recurrence
+        +__repr__() str
+    }
+
+    class ScheduledTask {
+        +CareTask task
+        +str start_time
+        +str end_time
+        +str reason
+    }
+
+    class Scheduler {
+        +build_schedule(pet, available_minutes, day_start) DailyPlan
+        +sort_tasks(tasks) list~CareTask~
+        +filter_by_time(sorted_tasks, available_minutes) list~CareTask~
+        +resolve_conflicts(tasks) list~CareTask~
+        +explain(scheduled_task) str
+    }
+
+    class DailyPlan {
+        +Pet pet
+        +str date
+        +list~ScheduledTask~ scheduled_tasks
+        +list skipped_tasks
+        +total_time_used() int
+        +summary() str
+    }
+
+    Owner "1" --> "many" Pet : owns
+    Pet "1" --> "many" CareTask : has
+    CareTask "1" --> "many" ScheduledTask : placed as
+    DailyPlan "1" --> "many" ScheduledTask : contains
+    Scheduler ..> DailyPlan : creates
+    CareTask --> TaskCategory
+    CareTask --> Priority
+    CareTask --> Recurrence

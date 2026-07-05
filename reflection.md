@@ -2,6 +2,11 @@
 
 ## 1. System Design
 
+### Core actions
+- add pets and info
+- add/edit tasks 
+- create a schedule plan
+
 **a. Initial design**
 
 - Briefly describe your initial UML design.
