@@ -1,13 +1,24 @@
 classDiagram
-    %% Initial design draft — will be refined once implementation is underway.
+    %% Matches pawpal_system.py. Scheduler merges tasks across ALL of an
+    %% owner's pets into one DailyPlan (not one plan per pet).
 
-    class Owner {
-        +str name
-        +int available_minutes_per_day
-        +str preferred_start_time
-        +dict preferences
-        +add_pet(pet) None
-        +get_pets() list~Pet~
+    class Frequency {
+        <<enumeration>>
+        ONCE
+        DAILY
+        WEEKLY
+    }
+
+    class Task {
+        +str id
+        +str description
+        +str time
+        +Frequency frequency
+        +bool completed
+        +mark_complete() None
+        +mark_incomplete() None
+        +is_due() bool
+        +__repr__() str
     }
 
     class Pet {
@@ -18,73 +29,45 @@ classDiagram
         +Owner owner
         +add_task(task) None
         +remove_task(task_id) None
-        +get_tasks() list~CareTask~
+        +get_tasks() list~Task~
     }
 
-    class Priority {
-        <<enumeration>>
-        LOW
-        MEDIUM
-        HIGH
-    }
-
-    class TaskCategory {
-        <<enumeration>>
-        WALK
-        FEEDING
-        MEDICATION
-        ENRICHMENT
-        GROOMING
-        OTHER
-    }
-
-    class Recurrence {
-        <<enumeration>>
-        NONE
-        DAILY
-        WEEKLY
-    }
-
-    class CareTask {
-        +str id
-        +str title
-        +TaskCategory category
-        +int duration_minutes
-        +Priority priority
-        +str fixed_time
-        +Recurrence recurrence
-        +__repr__() str
+    class Owner {
+        +str name
+        +dict preferences
+        +add_pet(pet) None
+        +get_pets() list~Pet~
+        +get_all_tasks() list~tuple~
     }
 
     class ScheduledTask {
-        +CareTask task
-        +str start_time
-        +str end_time
+        +Pet pet
+        +Task task
         +str reason
     }
 
-    class Scheduler {
-        +build_schedule(pet, available_minutes, day_start) DailyPlan
-        +sort_tasks(tasks) list~CareTask~
-        +filter_by_time(sorted_tasks, available_minutes) list~CareTask~
-        +resolve_conflicts(tasks) list~CareTask~
-        +explain(scheduled_task) str
-    }
-
     class DailyPlan {
-        +Pet pet
+        +Owner owner
         +str date
         +list~ScheduledTask~ scheduled_tasks
-        +list skipped_tasks
-        +total_time_used() int
+        +list~tuple~ conflicts
+        +add_scheduled_task(scheduled_task) None
         +summary() str
     }
 
+    class Scheduler {
+        +build_schedule(owner, date) DailyPlan
+        +get_due_tasks(owner) list~tuple~
+        +sort_by_time(pet_tasks) list~tuple~
+        +find_conflicts(scheduled_tasks) list~tuple~
+        +explain(task) str
+    }
+
     Owner "1" --> "many" Pet : owns
-    Pet "1" --> "many" CareTask : has
-    CareTask "1" --> "many" ScheduledTask : placed as
+    Pet "1" --> "many" Task : has
+    Task --> Frequency
+    Owner "1" --> "many" DailyPlan : requests
     DailyPlan "1" --> "many" ScheduledTask : contains
+    ScheduledTask --> Pet : for
+    ScheduledTask --> Task : wraps
     Scheduler ..> DailyPlan : creates
-    CareTask --> TaskCategory
-    CareTask --> Priority
-    CareTask --> Recurrence
