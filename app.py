@@ -1,4 +1,8 @@
+from datetime import date, time as time_of_day
+
 import streamlit as st
+
+from pawpal_system import Frequency, Owner, Pet, Scheduler, Task
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -38,51 +42,79 @@ At minimum, your system should:
 
 st.divider()
 
-st.subheader("Quick Demo Inputs (UI only)")
+st.subheader("Owner")
 owner_name = st.text_input("Owner name", value="Jordan")
-pet_name = st.text_input("Pet name", value="Mochi")
-species = st.selectbox("Species", ["dog", "cat", "other"])
 
-st.markdown("### Tasks")
-st.caption("Add a few tasks. In your final version, these should feed into your scheduler.")
-
-if "tasks" not in st.session_state:
-    st.session_state.tasks = []
-
-col1, col2, col3 = st.columns(3)
-with col1:
-    task_title = st.text_input("Task title", value="Morning walk")
-with col2:
-    duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
-with col3:
-    priority = st.selectbox("Priority", ["low", "medium", "high"], index=2)
-
-if st.button("Add task"):
-    st.session_state.tasks.append(
-        {"title": task_title, "duration_minutes": int(duration), "priority": priority}
-    )
-
-if st.session_state.tasks:
-    st.write("Current tasks:")
-    st.table(st.session_state.tasks)
-else:
-    st.info("No tasks yet. Add one above.")
+if "owner" not in st.session_state:
+    st.session_state.owner = Owner(owner_name)
+owner = st.session_state.owner
+owner.name = owner_name
 
 st.divider()
 
-st.subheader("Build Schedule")
-st.caption("This button should call your scheduling logic once you implement it.")
+st.subheader("Add a Pet")
+col1, col2 = st.columns(2)
+with col1:
+    pet_name = st.text_input("Pet name", value="Mochi")
+with col2:
+    species = st.selectbox("Species", ["dog", "cat", "other"])
+
+if st.button("Add pet"):
+    if pet_name:
+        Pet(pet_name, species, owner)  # Pet.__init__ registers itself on owner.pets
+        st.success(f"Added {pet_name} to {owner.name}'s pets.")
+    else:
+        st.warning("Enter a pet name first.")
+
+if owner.get_pets():
+    st.write("Pets:")
+    st.table([{"name": p.name, "species": p.species} for p in owner.get_pets()])
+else:
+    st.info("No pets yet. Add one above.")
+
+st.divider()
+
+st.subheader("Schedule a Task")
+
+if owner.get_pets():
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        selected_pet_name = st.selectbox("Pet", [p.name for p in owner.get_pets()])
+    with col2:
+        description = st.text_input("Task description", value="Morning walk")
+    with col3:
+        task_time = st.time_input("Time", value=time_of_day(8, 0))
+
+    frequency = st.selectbox("Frequency", [f.value for f in Frequency], index=1)
+
+    if st.button("Add task"):
+        selected_pet = next(p for p in owner.get_pets() if p.name == selected_pet_name)
+        selected_pet.add_task(Task(description, task_time.strftime("%H:%M"), Frequency(frequency)))
+        st.success(f"Added '{description}' at {task_time.strftime('%H:%M')} for {selected_pet_name}.")
+else:
+    st.info("Add a pet before scheduling tasks.")
+
+all_tasks = owner.get_all_tasks()
+if all_tasks:
+    st.write("Current tasks:")
+    st.table(
+        [
+            {
+                "pet": pet.name,
+                "description": t.description,
+                "time": t.time,
+                "frequency": t.frequency.value,
+                "completed": t.completed,
+            }
+            for pet, t in all_tasks
+        ]
+    )
+
+st.divider()
+
+st.subheader("Today's Schedule")
 
 if st.button("Generate schedule"):
-    st.warning(
-        "Not implemented yet. Next step: create your scheduling logic (classes/functions) and call it here."
-    )
-    st.markdown(
-        """
-Suggested approach:
-1. Design your UML (draft).
-2. Create class stubs (no logic).
-3. Implement scheduling behavior.
-4. Connect your scheduler here and display results.
-"""
-    )
+    scheduler = Scheduler()
+    plan = scheduler.build_schedule(owner, date.today().isoformat())
+    st.text(plan.summary())
