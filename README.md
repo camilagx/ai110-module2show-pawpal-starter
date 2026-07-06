@@ -61,17 +61,42 @@ Daily plan for Camila — 2026-07-05:
 
 ```bash
 # Run the full test suite:
-pytest
+python -m pytest tests/test_pawpal.py -v
 
 # Run with coverage:
 pytest --cov
 ```
 
+`tests/test_pawpal.py` covers the core scheduling behaviors:
+
+- **Task completion** — marking a task complete flips its `completed` status.
+- **Pet task management** — adding a task to a `Pet` updates its task list.
+- **Sorting correctness** — `Scheduler.sort_by_time()` returns tasks added out of order (18:00, 08:00, 12:30) back in chronological order.
+- **Recurrence logic** — completing a `DAILY` task auto-creates the next occurrence due exactly one day later, still incomplete, and registered on the same pet.
+- **Conflict detection** — `Scheduler.build_schedule()` flags two different pets' tasks scheduled at the same time as a conflict group.
+
 Sample test output:
 
 ```
-# Paste your pytest output here
+============================= test session starts ==============================
+platform darwin -- Python 3.13.0, pytest-9.0.3, pluggy-1.6.0 -- /Library/Frameworks/Python.framework/Versions/3.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/camila/Desktop/CodePath/ai110-module2show-pawpal-starter
+plugins: anyio-4.13.0
+collecting ... collected 5 items
+
+tests/test_pawpal.py::test_mark_complete_changes_status PASSED           [ 20%]
+tests/test_pawpal.py::test_adding_task_increases_pet_task_count PASSED   [ 40%]
+tests/test_pawpal.py::test_sort_by_time_returns_chronological_order PASSED [ 60%]
+tests/test_pawpal.py::test_mark_complete_daily_task_creates_next_day_task PASSED [ 80%]
+tests/test_pawpal.py::test_build_schedule_flags_duplicate_times_as_conflict PASSED [100%]
+
+============================== 5 passed in 0.01s ===============================
 ```
+
+**Confidence Level:** ⭐⭐⭐☆☆ (3/5)
+
+All 5 tests pass and the core behaviors — sorting, daily recurrence, and same-time conflict detection — are verified. Confidence isn't higher yet because several edge cases still lack coverage: `WEEKLY` tasks with specific `recurs_on` weekdays, `is_due()` boundary conditions (exactly on `due_date`, already-completed tasks), `filter_tasks()` with no matches, and conflicts involving the same pet at the same time.
 
 ## 📐 Smarter Scheduling
 
