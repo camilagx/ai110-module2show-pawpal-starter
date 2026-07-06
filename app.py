@@ -105,20 +105,39 @@ else:
     st.info("Add a pet before scheduling tasks.")
 
 all_tasks = owner.get_all_tasks()
+
+st.subheader("Current Tasks")
 if all_tasks:
-    st.write("Current tasks:")
-    st.table(
-        [
-            {
-                "pet": pet.name,
-                "description": t.description,
-                "time": t.time,
-                "frequency": t.frequency.value,
-                "completed": t.completed,
-            }
-            for pet, t in all_tasks
-        ]
+    filter_col1, filter_col2 = st.columns(2)
+    with filter_col1:
+        pet_filter = st.selectbox("Filter by pet", ["All"] + [p.name for p in owner.get_pets()])
+    with filter_col2:
+        status_filter = st.selectbox("Filter by status", ["All", "Pending", "Completed"])
+
+    filtered_tasks = scheduler.filter_tasks(
+        all_tasks,
+        pet_name=None if pet_filter == "All" else pet_filter,
+        completed=None if status_filter == "All" else status_filter == "Completed",
     )
+    sorted_tasks = scheduler.sort_by_time(filtered_tasks)
+
+    if sorted_tasks:
+        st.table(
+            [
+                {
+                    "time": t.time,
+                    "pet": pet.name,
+                    "description": t.description,
+                    "frequency": t.frequency.value,
+                    "completed": "✅" if t.completed else "⏳",
+                }
+                for pet, t in sorted_tasks
+            ]
+        )
+    else:
+        st.info("No tasks match that filter.")
+else:
+    st.info("No tasks yet. Add one above.")
 
 st.divider()
 
@@ -126,4 +145,27 @@ st.subheader("Today's Schedule")
 
 if st.button("Generate schedule"):
     plan = scheduler.build_schedule(owner, date.today().isoformat())
-    st.text(plan.summary())
+
+    if not plan.scheduled_tasks:
+        st.info(f"No tasks scheduled for {owner.name} today.")
+    else:
+        warnings = scheduler.conflict_warnings(plan.scheduled_tasks)
+        if warnings:
+            for warning in warnings:
+                st.warning(warning)
+        else:
+            st.success(f"✅ No conflicts — {owner.name}'s schedule looks good!")
+
+        conflicted_ids = {entry.task.id for group in plan.conflicts for entry in group}
+        st.table(
+            [
+                {
+                    "time": entry.task.time,
+                    "pet": entry.pet.name,
+                    "description": entry.task.description,
+                    "frequency": entry.task.frequency.value,
+                    "conflict": "⚠️" if entry.task.id in conflicted_ids else "",
+                }
+                for entry in plan.scheduled_tasks
+            ]
+        )

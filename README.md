@@ -42,6 +42,16 @@ pip install -r requirements.txt
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
 
+## ✨ Features
+
+- **Multi-pet task tracking** — one `Owner` manages any number of `Pet`s, each with its own list of care tasks (walks, feeding, meds, grooming, enrichment, etc.).
+- **Sorting by time** — `Scheduler.sort_by_time()` merges every pet's due tasks into one chronological daily plan, regardless of the order tasks were added in.
+- **Filtering** — `Scheduler.filter_tasks()` narrows the task list by pet name and/or completion status (e.g. "just Kumo's tasks" or "just what's still pending").
+- **Conflict detection & warnings** — `Scheduler.find_conflicts()` groups same-time tasks (same pet or different pets), and `conflict_warnings()` turns each group into a readable `⚠️ Conflict at HH:MM: ...` message instead of crashing or silently double-booking.
+- **Pre-add conflict check** — `Scheduler.tasks_at_time()` checks a candidate time *before* a task is created, so the UI can prompt the user for a different time instead of creating the conflict at all.
+- **Daily & weekly recurrence** — `Task.mark_complete()` auto-generates the task's next occurrence via `Task.next_occurrence()`: `+1 day` for `DAILY`, `+1 week` for `WEEKLY` (respecting specific weekdays via `recurs_on`), and registers it on the same pet automatically.
+- **Plan explanations** — `Scheduler.explain()` attaches a short human-readable reason (e.g. "Scheduled at 08:00 (daily)") to every entry in the generated `DailyPlan`.
+
 ## 🖥️ Sample Output
 
 Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
@@ -109,12 +119,76 @@ All 5 tests pass and the core behaviors — sorting, daily recurrence, and same-
 
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+### Streamlit UI
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+`app.py` exposes four main actions:
+
+- **Add a pet** — enter a name and species, click "Add pet." Pets show up in a table below (backed by `Owner.get_pets()`).
+- **Schedule a task** — pick a pet, description, time, and frequency (`ONCE`/`DAILY`/`WEEKLY`), then click "Add task." Before the task is created, `Scheduler.tasks_at_time()` checks for a same-time clash and warns the user to pick a different time instead of silently creating a conflict.
+- **Browse current tasks** — filter the full task list by pet and/or completion status (`filter_tasks()`), always shown in chronological order (`sort_by_time()`).
+- **Generate today's schedule** — click "Generate schedule" to build the merged `DailyPlan` across every pet for the current date; any remaining same-time conflicts are flagged inline with `⚠️`.
+
+### Example workflow
+
+1. Add owner "Camila," then add two pets: **Kumo** (dog) and **Whiskers** (cat).
+2. Schedule tasks: Kumo's "Morning walk" at 08:00 (daily), Whiskers' "Feeding" at 08:30 (daily), Whiskers' "Litter box cleaning" at 12:00 (weekly) — and, deliberately, Whiskers' "Morning cuddles" also at 08:00 (daily).
+3. Click "Generate schedule." The `Scheduler` pulls every due task across both pets, sorts them by time, and flags the 08:00 double-booking as a conflict rather than silently listing both back to back.
+4. Mark a task complete. If it's `DAILY` or `WEEKLY`, PawPal+ automatically creates the next occurrence (tomorrow, or next week) so it reappears on the next relevant day with no manual re-entry.
+
+### Key Scheduler behaviors shown
+
+- **Sorting** — tasks always render in chronological order, regardless of the order they were added in.
+- **Filtering** — the task table can be narrowed to one pet and/or pending-only tasks.
+- **Conflict warnings** — same-time tasks (same pet or across different pets) produce a `⚠️ Conflict at HH:MM: ...` warning instead of a crash or a silently double-booked slot.
+- **Recurrence** — completing a `DAILY`/`WEEKLY` task advances it to its next due date automatically via `next_occurrence()`.
+
+### Sample CLI output (`python main.py`)
+
+`main.py` exercises the same backend classes from the command line — useful for seeing the raw `Scheduler` behaviors without the UI:
+
+```
+Tasks as added (unsorted):
+  18:00 — Evening walk (Kumo, pending)
+  08:00 — Morning walk (Kumo, pending)
+  12:00 — Litter box cleaning (Whiskers, pending)
+  10:00 — Vet checkup (Whiskers, done)
+  08:30 — Feeding (Whiskers, pending)
+  08:00 — Morning cuddles (Whiskers, pending)
+
+Sorted by time:
+  08:00 — Morning walk (Kumo, pending)
+  08:00 — Morning cuddles (Whiskers, pending)
+  08:30 — Feeding (Whiskers, pending)
+  10:00 — Vet checkup (Whiskers, done)
+  12:00 — Litter box cleaning (Whiskers, pending)
+  18:00 — Evening walk (Kumo, pending)
+
+Filtered to Kumo's tasks:
+  18:00 — Evening walk (Kumo, pending)
+  08:00 — Morning walk (Kumo, pending)
+
+Filtered to incomplete tasks:
+  18:00 — Evening walk (Kumo, pending)
+  08:00 — Morning walk (Kumo, pending)
+  12:00 — Litter box cleaning (Whiskers, pending)
+  08:30 — Feeding (Whiskers, pending)
+  08:00 — Morning cuddles (Whiskers, pending)
+
+Today's Schedule
+========================================
+Daily plan for Camila — 2026-07-05:
+  08:00 — Morning walk (Kumo)
+  08:00 — Morning cuddles (Whiskers)
+  08:30 — Feeding (Whiskers)
+  12:00 — Litter box cleaning (Whiskers)
+  18:00 — Evening walk (Kumo)
+Conflicts:
+  08:00: Kumo's 'Morning walk', Whiskers's 'Morning cuddles'
+
+Conflict warnings:
+  ⚠️ Conflict at 08:00: Kumo's 'Morning walk', Whiskers's 'Morning cuddles'
+```
+
+Note the completed "Vet checkup" (`ONCE`, already done) is excluded from "Today's Schedule" — `Task.is_due()` skips completed tasks — but still appears in the earlier "unsorted"/"incomplete filter" listings, which read directly from `Owner.get_all_tasks()`.
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
