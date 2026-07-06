@@ -51,8 +51,9 @@ I verified this version by hand: built an owner with two pets, gave one pet two 
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+One deliberate tradeoff: `Scheduler.find_conflicts` only flags tasks that share the *exact same* `time` string (e.g., two tasks both at `"08:00"`). It does not model task duration at all, so it can't detect two tasks that merely *overlap* — a 30-minute walk starting at `08:00` and a separate task starting at `08:15` would, in reality, conflict, but PawPal+ won't flag them since `"08:00" != "08:15"`.
+
+This is reasonable for the current scope because `Task` was deliberately simplified to `description`/`time`/`frequency`/`completed` (see 1b) with no duration field — the assignment's leaner 4-class model treats each task as a point in time, not a time span. Adding real overlap detection would mean reintroducing a `duration_minutes` field and switching the comparison from equality (`a.time == b.time`) to interval overlap (`a.start < b.end and b.start < a.end`), which is a bigger model change than "exact match" conflict detection. Exact-time matching still catches the most obvious and disruptive case — two things that are supposed to happen at the literal same moment — while staying simple: a single O(n) grouping pass (`Scheduler.find_conflicts` buckets scheduled tasks by `time` using a dict) with no interval math to get wrong. I judged that a decent tradeoff for a first version, with real overlap detection as a natural next step if duration gets added back later.
 
 ---
 

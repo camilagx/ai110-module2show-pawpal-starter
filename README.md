@@ -49,11 +49,11 @@ Paste a sample of your app's CLI or Streamlit output here so a reader can see wh
 ```
 Today's Schedule
 ========================================
-Daily plan for Jordan — 2026-07-05:
-  08:00 — Morning walk (Mochi)
-  08:30 — Feeding (Biscuit)
-  12:00 — Litter box cleaning (Biscuit)
-  18:00 — Evening walk (Mochi)
+Daily plan for Camila — 2026-07-05:
+  08:00 — Morning walk (Kumo)
+  08:30 — Feeding (Whiskers)
+  12:00 — Litter box cleaning (Whiskers)
+  18:00 — Evening walk (Kumo)
 
 ```
 
@@ -75,14 +75,12 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
-
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_time()` | Sorts `(pet, task)` pairs chronologically with `sorted(..., key=lambda pair: pair[1].time)`. `time` is a zero-padded `"HH:MM"` string, so plain string comparison already matches chronological order — O(n log n), stable. |
+| Filtering | `Scheduler.filter_tasks()` | Filters `(pet, task)` pairs by optional `pet_name` and/or `completed` status (combined with AND when both are given) — e.g. "just Kumo's tasks" or "just what's still pending." |
+| Conflict handling | `Scheduler.find_conflicts()`, `Scheduler.conflict_warnings()`, `Scheduler.tasks_at_time()` | `find_conflicts()` buckets scheduled tasks by exact `time` match (O(n)) and returns any group of 2+ tasks sharing a slot, whether it's the same pet or different pets. `conflict_warnings()` turns those groups into readable `⚠️ Conflict at HH:MM: ...` messages — a conflict is reported, never raised, so it can't crash the app. `tasks_at_time()` runs the same check *before* a task is added (used by the "Add task" button in `app.py`), so the user is prompted to pick a different time instead of the conflict being created at all. Note: conflicts are detected by exact time match only, not overlapping durations — see `reflection.md` §2b for that tradeoff. |
+| Recurring tasks | `Task.is_due()`, `Task.next_occurrence()`, `Task.mark_complete()` | Each `Task` has a `frequency` (`ONCE`/`DAILY`/`WEEKLY`) and a `due_date`. `is_due(on_date)` decides whether a task belongs on a given day's plan, respecting `recurs_on` (specific weekdays) for `WEEKLY` tasks. Marking a `DAILY`/`WEEKLY` task complete via `mark_complete()` automatically calls `next_occurrence()`, which uses `datetime.timedelta` to compute the next due date (+1 day for `DAILY`, +1 week for `WEEKLY`) and registers the new instance on the same pet — no manual step needed. |
 
 ## 📸 Demo Walkthrough
 

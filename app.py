@@ -40,10 +40,12 @@ At minimum, your system should:
 """
     )
 
+scheduler = Scheduler()
+
 st.divider()
 
 st.subheader("Owner")
-owner_name = st.text_input("Owner name", value="Jordan")
+owner_name = st.text_input("Owner name", value="Camila")
 
 if "owner" not in st.session_state:
     st.session_state.owner = Owner(owner_name)
@@ -55,7 +57,7 @@ st.divider()
 st.subheader("Add a Pet")
 col1, col2 = st.columns(2)
 with col1:
-    pet_name = st.text_input("Pet name", value="Mochi")
+    pet_name = st.text_input("Pet name", value="Kumo")
 with col2:
     species = st.selectbox("Species", ["dog", "cat", "other"])
 
@@ -88,9 +90,17 @@ if owner.get_pets():
     frequency = st.selectbox("Frequency", [f.value for f in Frequency], index=1)
 
     if st.button("Add task"):
-        selected_pet = next(p for p in owner.get_pets() if p.name == selected_pet_name)
-        selected_pet.add_task(Task(description, task_time.strftime("%H:%M"), Frequency(frequency)))
-        st.success(f"Added '{description}' at {task_time.strftime('%H:%M')} for {selected_pet_name}.")
+        new_time = task_time.strftime("%H:%M")
+        clashes = scheduler.tasks_at_time(owner.get_all_tasks(), new_time)
+        if clashes:
+            clash_list = ", ".join(f"{pet.name}'s {task.description!r}" for pet, task in clashes)
+            st.warning(
+                f"⏰ {new_time} conflicts with {clash_list}. Please enter a different time."
+            )
+        else:
+            selected_pet = next(p for p in owner.get_pets() if p.name == selected_pet_name)
+            selected_pet.add_task(Task(description, new_time, Frequency(frequency)))
+            st.success(f"Added '{description}' at {new_time} for {selected_pet_name}.")
 else:
     st.info("Add a pet before scheduling tasks.")
 
@@ -115,6 +125,5 @@ st.divider()
 st.subheader("Today's Schedule")
 
 if st.button("Generate schedule"):
-    scheduler = Scheduler()
     plan = scheduler.build_schedule(owner, date.today().isoformat())
     st.text(plan.summary())
