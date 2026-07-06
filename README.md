@@ -190,5 +190,3 @@ Conflict warnings:
 ```
 
 Note the completed "Vet checkup" (`ONCE`, already done) is excluded from "Today's Schedule" — `Task.is_due()` skips completed tasks — but still appears in the earlier "unsorted"/"incomplete filter" listings, which read directly from `Owner.get_all_tasks()`.
-
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
